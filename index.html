@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HR Attrition Analysis — IBM Dataset</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0f1117;
+    --surface:   #161b27;
+    --card:      #1c2333;
+    --border:    rgba(255,255,255,0.07);
+    --text:      #e2e8f0;
+    --muted:     #64748b;
+    --accent:    #3b82f6;
+    --accent2:   #06b6d4;
+    --red:       #f87171;
+    --green:     #34d399;
+    --amber:     #fbbf24;
+    --purple:    #a78bfa;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── header ─────────────────────────────────────────────── */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 2rem 2.5rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .header-left h1 {
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: #f1f5f9;
+    margin-bottom: 4px;
+  }
+  .header-left p {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+  .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tag {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    background: var(--card);
+  }
+
+  /* ── layout ─────────────────────────────────────────────── */
+  main { padding: 1.5rem 2.5rem 3rem; display: flex; flex-direction: column; gap: 1.25rem; }
+
+  /* ── KPI strip ───────────────────────────────────────────── */
+  .kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; }
+  .kpi {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.1rem 1.25rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--kpi-color, var(--accent));
+    border-radius: 10px 10px 0 0;
+  }
+  .kpi-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .kpi-val { font-size: 2rem; font-weight: 600; color: #f1f5f9; letter-spacing: -0.03em; line-height: 1; }
+  .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  /* ── grid rows ───────────────────────────────────────────── */
+  .row { display: grid; gap: 10px; }
+  .row-3 { grid-template-columns: 220px minmax(0,1fr) minmax(0,1fr); }
+  .row-4 { grid-template-columns: repeat(4, minmax(0,1fr)); }
+  .row-2 { grid-template-columns: minmax(0,1.4fr) minmax(0,1fr); }
+
+  /* ── card ────────────────────────────────────────────────── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.1rem 1.25rem;
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 14px;
+  }
+  .chart-wrap { position: relative; width: 100%; }
+
+  /* ── donut ───────────────────────────────────────────────── */
+  .donut-wrap { position: relative; height: 170px; }
+  .donut-center {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center; pointer-events: none;
+  }
+  .donut-center span { display: block; }
+  .donut-center .pct { font-size: 1.5rem; font-weight: 600; color: var(--red); letter-spacing: -0.02em; }
+  .donut-center .lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* ── legend ──────────────────────────────────────────────── */
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
+  .leg { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+  .leg-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+  /* ── table ───────────────────────────────────────────────── */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { font-size: 10px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: right; }
+  th:first-child { text-align: left; }
+  td { padding: 7px 8px; border-bottom: 1px solid var(--border); color: var(--text); text-align: right; }
+  td:first-child { text-align: left; color: #f1f5f9; }
+  tr:last-child td { border-bottom: none; font-weight: 500; border-top: 1px solid rgba(255,255,255,0.1); }
+  .chip {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+  }
+  .chip-no  { background: rgba(59,130,246,0.15); color: #93c5fd; }
+  .chip-yes { background: rgba(248,113,113,0.15); color: #fca5a5; }
+
+  /* ── insight bar ─────────────────────────────────────────── */
+  .insights { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
+  .insight {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+  }
+  .insight-num { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.03em; margin-bottom: 2px; }
+  .insight-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+  /* ── footer ──────────────────────────────────────────────── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 1.25rem 2.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  @media (max-width: 900px) {
+    header { padding: 1.25rem; }
+    main { padding: 1rem; }
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .row-3, .row-4 { grid-template-columns: 1fr; }
+    .row-2 { grid-template-columns: 1fr; }
+    .insights { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>HR Attrition Analysis &amp; Prediction</h1>
+    <p>IBM HR Analytics · 1,470 employees · 34 features · sklearn · SQLite</p>
+  </div>
+  <div class="tags">
+    <span class="tag">Python</span>
+    <span class="tag">SQLite</span>
+    <span class="tag">Random Forest</span>
+    <span class="tag">Gradient Boosting</span>
+    <span class="tag">Logistic Regression</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- KPIs -->
+  <div class="kpis">
+    <div class="kpi" style="--kpi-color:#f87171">
+      <div class="kpi-label">Attrition Rate</div>
+      <div class="kpi-val">16.1%</div>
+      <div class="kpi-sub">237 of 1,470 employees</div>
+    </div>
+    <div class="kpi" style="--kpi-color:#fbbf24">
+      <div class="kpi-label">Replacement Cost</div>
+      <div class="kpi-val">$6.81M</div>
+      <div class="kpi-sub">~50% of annual salary lost</div>
+    </div>
+    <div class="kpi" style="--kpi-color:#34d399">
+      <div class="kpi-label">Avg Monthly Income</div>
+      <div class="kpi-val">$6.5K</div>
+      <div class="kpi-sub">leavers avg $4.8K</div>
+    </div>
+    <div class="kpi" style="--kpi-color:#a78bfa">
+      <div class="kpi-label">Best Model AUC</div>
+      <div class="kpi-val">0.807</div>
+      <div class="kpi-sub">Logistic Regression (5-fold CV)</div>
+    </div>
+  </div>
+
+  <!-- Row 1: donut + dept bar + role bar + overtime -->
+  <div class="row row-4">
+    <div class="card">
+      <div class="card-title">Overall attrition</div>
+      <div class="donut-wrap">
+        <canvas id="donut"></canvas>
+        <div class="donut-center">
+          <span class="pct">16.1%</span>
+          <span class="lbl">left</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">By department</div>
+      <div class="chart-wrap" style="height:170px"><canvas id="dept"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">By job role</div>
+      <div class="chart-wrap" style="height:170px"><canvas id="role"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Overtime impact</div>
+      <div class="chart-wrap" style="height:170px"><canvas id="ot"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Row 2: drivers 2x3 grid + table -->
+  <div class="row row-2">
+    <div class="card">
+      <div class="card-title">Key attrition drivers</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><div style="font-size:10px;color:var(--muted);margin-bottom:6px">Salary band</div><div class="chart-wrap" style="height:120px"><canvas id="sal"></canvas></div></div>
+        <div><div style="font-size:10px;color:var(--muted);margin-bottom:6px">Tenure group</div><div class="chart-wrap" style="height:120px"><canvas id="ten"></canvas></div></div>
+        <div><div style="font-size:10px;color:var(--muted);margin-bottom:6px">Age group</div><div class="chart-wrap" style="height:120px"><canvas id="age"></canvas></div></div>
+        <div><div style="font-size:10px;color:var(--muted);margin-bottom:6px">Job satisfaction</div><div class="chart-wrap" style="height:120px"><canvas id="sat"></canvas></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Attrition rate by department — No vs Yes</div>
+      <table>
+        <thead><tr><th>Department</th><th>No (%)</th><th>Yes (%)</th><th>Total left</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Human Resources</td>
+            <td><span class="chip chip-no">15.22</span></td>
+            <td><span class="chip chip-yes">29.41</span></td>
+            <td>19</td>
+          </tr>
+          <tr>
+            <td>R &amp; D</td>
+            <td><span class="chip chip-no">8.55</span></td>
+            <td><span class="chip chip-yes">27.31</span></td>
+            <td>133</td>
+          </tr>
+          <tr>
+            <td>Sales</td>
+            <td><span class="chip chip-no">13.84</span></td>
+            <td><span class="chip chip-yes">37.50</span></td>
+            <td>92</td>
+          </tr>
+          <tr>
+            <td>Total</td>
+            <td>10.44</td>
+            <td>30.53</td>
+            <td>237</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top:1.25rem">
+        <div class="card-title">Model comparison — ROC AUC</div>
+        <div class="chart-wrap" style="height:130px"><canvas id="auc"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 3: feature importance + income dist -->
+  <div class="row row-2">
+    <div class="card">
+      <div class="card-title">Top 15 features — Random Forest importance</div>
+      <div class="chart-wrap" style="height:340px"><canvas id="feat"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Income distribution by attrition</div>
+      <div class="legend">
+        <div class="leg"><span class="leg-dot" style="background:#34d399"></span>Stayed</div>
+        <div class="leg"><span class="leg-dot" style="background:#f87171"></span>Left</div>
+      </div>
+      <div class="chart-wrap" style="height:190px"><canvas id="inc"></canvas></div>
+      <div style="margin-top:1.25rem">
+        <div class="card-title">Correlation with attrition</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:11px;color:var(--muted);width:140px;flex-shrink:0">OverTime_Binary</span>
+            <div style="flex:1;height:6px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden"><div style="height:100%;width:83%;background:#f87171;border-radius:3px"></div></div>
+            <span style="font-size:11px;font-family:'DM Mono',monospace;color:#f87171;width:36px;text-align:right">+0.25</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:11px;color:var(--muted);width:140px;flex-shrink:0">Age</span>
+            <div style="flex:1;height:6px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden"><div style="height:100%;width:53%;background:#64748b;border-radius:3px"></div></div>
+            <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);width:36px;text-align:right">-0.16</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:11px;color:var(--muted);width:140px;flex-shrink:0">MonthlyIncome</span>
+            <div style="flex:1;height:6px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden"><div style="height:100%;width:53%;background:#64748b;border-radius:3px"></div></div>
+            <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);width:36px;text-align:right">-0.16</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:11px;color:var(--muted);width:140px;flex-shrink:0">YearsAtCompany</span>
+            <div style="flex:1;height:6px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden"><div style="height:100%;width:43%;background:#64748b;border-radius:3px"></div></div>
+            <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);width:36px;text-align:right">-0.13</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:11px;color:var(--muted);width:140px;flex-shrink:0">JobSatisfaction</span>
+            <div style="flex:1;height:6px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden"><div style="height:100%;width:33%;background:#64748b;border-radius:3px"></div></div>
+            <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);width:36px;text-align:right">-0.10</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- insights -->
+  <div class="insights">
+    <div class="insight">
+      <div class="insight-num" style="color:var(--red)">3×</div>
+      <div class="insight-desc">Higher attrition for employees on overtime — 30.5% vs 10.4%</div>
+    </div>
+    <div class="insight">
+      <div class="insight-num" style="color:var(--amber)">34.8%</div>
+      <div class="insight-desc">Attrition rate for 18–25 age group, nearly double the company average</div>
+    </div>
+    <div class="insight">
+      <div class="insight-num" style="color:var(--green)">28.6%</div>
+      <div class="insight-desc">Low salary band (&lt;$3K/mo) attrition vs 8.9% at the top band</div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <span>IBM HR Analytics · 1,470 employees · Python · SQLite · scikit-learn</span>
+  <span style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <span style="color:var(--muted)">Shubham Tanwar</span>
+    <a href="https://www.linkedin.com/in/shubham-tanwar-141bb0379" target="_blank">LinkedIn</a>
+    <a href="https://github.com/shubham-tanwar-lab/hr-attrition-analysis" target="_blank">GitHub</a>
+  </span>
+</footer>
+
+<script>
+const G = '#rgba(255,255,255,0)';
+const grid  = 'rgba(255,255,255,0.05)';
+const tick  = '#64748b';
+const baseOpts = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1c2333', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, titleColor: '#f1f5f9', bodyColor: '#94a3b8', padding: 10, cornerRadius: 6 } },
+  scales: {
+    x: { grid: { color: grid }, ticks: { color: tick, font: { size: 10, family: "'DM Mono', monospace" } } },
+    y: { grid: { color: grid }, ticks: { color: tick, font: { size: 10, family: "'DM Mono', monospace" } } }
+  }
+};
+
+// donut
+new Chart(document.getElementById('donut'), {
+  type: 'doughnut',
+  data: { labels: ['Stayed', 'Left'], datasets: [{ data: [83.9, 16.1], backgroundColor: ['rgba(59,130,246,0.3)', 'rgba(248,113,113,0.8)'], borderColor: ['rgba(59,130,246,0.5)', '#f87171'], borderWidth: 1 }] },
+  options: { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1c2333', titleColor: '#f1f5f9', bodyColor: '#94a3b8', padding: 10, cornerRadius: 6 } } }
+});
+
+// dept
+new Chart(document.getElementById('dept'), {
+  type: 'bar',
+  data: { labels: ['R & D', 'HR', 'Sales'], datasets: [{ data: [13.8, 19.0, 20.6], backgroundColor: ['rgba(59,130,246,0.7)', 'rgba(59,130,246,0.7)', 'rgba(248,113,113,0.8)'], borderRadius: 4 }] },
+  options: { ...baseOpts, indexAxis: 'y', scales: { x: { ...baseOpts.scales.x, ticks: { ...baseOpts.scales.x.ticks, callback: v => v + '%' } }, y: { ...baseOpts.scales.y, grid: { display: false } } } }
+});
+
+// role
+new Chart(document.getElementById('role'), {
+  type: 'bar',
+  data: {
+    labels: ['Research Dir.', 'Manager', 'HC Rep', 'Mfg Dir', 'Research Sci.', 'Sales Exec', 'HR', 'Lab Tech', 'Sales Rep'],
+    datasets: [{ data: [2.5, 5.1, 7.7, 9.1, 16.1, 17.5, 23.1, 23.8, 39.8], backgroundColor: 'rgba(167,139,250,0.7)', borderRadius: 3 }]
+  },
+  options: { ...baseOpts, indexAxis: 'y', scales: { x: { ...baseOpts.scales.x, ticks: { ...baseOpts.scales.x.ticks, callback: v => v + '%' } }, y: { ...baseOpts.scales.y, grid: { display: false }, ticks: { ...baseOpts.scales.y.ticks, font: { size: 9, family: "'DM Sans', sans-serif" } } } } }
+});
+
+// overtime
+new Chart(document.getElementById('ot'), {
+  type: 'bar',
+  data: { labels: ['No overtime', 'Overtime'], datasets: [{ data: [10.4, 30.5], backgroundColor: ['rgba(52,211,153,0.7)', 'rgba(248,113,113,0.8)'], borderRadius: 6 }] },
+  options: { ...baseOpts, scales: { x: { ...baseOpts.scales.x, grid: { display: false } }, y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: v => v + '%' } } } }
+});
+
+// salary band
+new Chart(document.getElementById('sal'), {
+  type: 'bar',
+  data: { labels: ['<3K', '3-6K', '6-10K', '10K+'], datasets: [{ data: [28.6, 12.7, 12.0, 8.9], backgroundColor: ['rgba(248,113,113,0.8)', 'rgba(251,191,36,0.6)', 'rgba(59,130,246,0.6)', 'rgba(52,211,153,0.6)'], borderRadius: 3 }] },
+  options: { ...baseOpts, scales: { x: { ...baseOpts.scales.x, grid: { display: false }, ticks: { ...baseOpts.scales.x.ticks } }, y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: v => v + '%' } } } }
+});
+
+// tenure
+new Chart(document.getElementById('ten'), {
+  type: 'bar',
+  data: { labels: ['0-2y', '3-5y', '6-10y', '11-20y', '20+y'], datasets: [{ data: [28.9, 13.8, 12.3, 6.7, 12.1], backgroundColor: 'rgba(6,182,212,0.7)', borderRadius: 3 }] },
+  options: { ...baseOpts, scales: { x: { ...baseOpts.scales.x, grid: { display: false } }, y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: v => v + '%' } } } }
+});
+
+// age
+new Chart(document.getElementById('age'), {
+  type: 'bar',
+  data: { labels: ['18-25', '26-35', '36-45', '46-55', '56+'], datasets: [{ data: [34.8, 19.1, 9.2, 11.5, 17.0], backgroundColor: 'rgba(251,191,36,0.7)', borderRadius: 3 }] },
+  options: { ...baseOpts, scales: { x: { ...baseOpts.scales.x, grid: { display: false } }, y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: v => v + '%' } } } }
+});
+
+// satisfaction
+new Chart(document.getElementById('sat'), {
+  type: 'bar',
+  data: { labels: ['1 (low)', '2', '3', '4 (high)'], datasets: [{ data: [22.8, 16.4, 16.5, 11.3], backgroundColor: 'rgba(167,139,250,0.7)', borderRadius: 3 }] },
+  options: { ...baseOpts, scales: { x: { ...baseOpts.scales.x, grid: { display: false } }, y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: v => v + '%' } } } }
+});
+
+// AUC comparison
+new Chart(document.getElementById('auc'), {
+  type: 'bar',
+  data: {
+    labels: ['Logistic Reg.', 'Gradient Boosting', 'Random Forest'],
+    datasets: [{ data: [0.807, 0.798, 0.786], backgroundColor: ['rgba(52,211,153,0.8)', 'rgba(59,130,246,0.7)', 'rgba(167,139,250,0.7)'], borderRadius: 4 }]
+  },
+  options: {
+    ...baseOpts,
+    indexAxis: 'y',
+    scales: {
+      x: { ...baseOpts.scales.x, min: 0.75, max: 0.83, ticks: { ...baseOpts.scales.x.ticks, callback: v => v.toFixed(2) } },
+      y: { ...baseOpts.scales.y, grid: { display: false } }
+    }
+  }
+});
+
+// feature importance
+new Chart(document.getElementById('feat'), {
+  type: 'bar',
+  data: {
+    labels: [
+      'YearsInCurrentRole','JobRole','StockOptionLevel','PercentSalaryHike',
+      'NumCompaniesWorked','YearsWithCurrManager','HourlyRate','DistanceFromHome',
+      'OverTime','MonthlyRate','YearsAtCompany','TotalWorkingYears',
+      'DailyRate','Age','MonthlyIncome'
+    ],
+    datasets: [{ data: [0.033,0.034,0.034,0.035,0.036,0.038,0.046,0.047,0.048,0.048,0.050,0.056,0.056,0.072,0.079], backgroundColor: 'rgba(59,130,246,0.7)', borderRadius: 3 }]
+  },
+  options: { ...baseOpts, indexAxis: 'y', scales: { x: { ...baseOpts.scales.x, ticks: { ...baseOpts.scales.x.ticks, callback: v => v.toFixed(2) } }, y: { ...baseOpts.scales.y, grid: { display: false }, ticks: { ...baseOpts.scales.y.ticks, font: { size: 10, family: "'DM Sans', sans-serif" } } } } }
+});
+
+// income KDE approximation as line chart
+const xs = [-5000,-2000,0,1000,2000,3000,4000,5000,6000,7000,8000,10000,12000,15000,18000,22000,26000,30000];
+const stayed = [0,0,0.00002,0.00005,0.00010,0.00013,0.00013,0.00011,0.00009,0.00007,0.00006,0.00004,0.00003,0.00002,0.00002,0.00001,0.000005,0];
+const left   = [0,0,0.00003,0.00008,0.00016,0.00018,0.00015,0.00011,0.00007,0.00004,0.00003,0.00002,0.00001,0.000005,0,0,0,0];
+new Chart(document.getElementById('inc'), {
+  type: 'line',
+  data: {
+    labels: xs.map(v => v >= 1000 ? '$'+Math.round(v/1000)+'K' : (v < 0 ? '-$'+Math.round(-v/1000)+'K' : '$0')),
+    datasets: [
+      { label: 'Stayed', data: stayed, borderColor: '#34d399', borderWidth: 2, pointRadius: 0, tension: 0.4, fill: true, backgroundColor: 'rgba(52,211,153,0.08)' },
+      { label: 'Left',   data: left,   borderColor: '#f87171', borderWidth: 2, pointRadius: 0, tension: 0.4, fill: true, backgroundColor: 'rgba(248,113,113,0.08)' }
+    ]
+  },
+  options: { ...baseOpts, plugins: { ...baseOpts.plugins, legend: { display: false } }, scales: { x: { ...baseOpts.scales.x, ticks: { ...baseOpts.scales.x.ticks, maxTicksLimit: 8 } }, y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: () => '' }, grid: { display: false } } } }
+});
+</script>
+</body>
+</html>
