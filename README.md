@@ -2,7 +2,7 @@
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/shubham-tanwar-lab/hr-attrition-analysis/blob/main/HR_Attrition_Colab_Clean%20.ipynb)
 [![View on nbviewer](https://img.shields.io/badge/View%20on-nbviewer-orange?logo=jupyter)](https://nbviewer.org/github/shubham-tanwar-lab/hr-attrition-analysis/blob/main/HR_Attrition_Colab_Clean%20.ipynb)
-[![Live Dashboard](https://img.shields.io/badge/Live%20Dashboard-GitHub%20Pages-black?logo=github)](https://shubham-tanwar-lab.github.io/hr-attrition-analysis)
+[![Live Dashboard](https://img.shields.io/badge/Live%20Dashboard-GitHub%20Pages-black?logo=github)](https://shubham-tanwar-lab.github.io/HR-Attrition-Analysis)
 ![Python](https://img.shields.io/badge/Python-3.10-blue?logo=python&logoColor=white)
 ![sklearn](https://img.shields.io/badge/scikit--learn-1.3-orange?logo=scikit-learn&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-3-lightgrey?logo=sqlite)
@@ -13,7 +13,7 @@
 
 ## Live Demo
 
-**[View Interactive Dashboard →](https://shubham-tanwar-lab.github.io/hr-attrition-analysis)**
+**[View Interactive Dashboard →](https://shubham-tanwar-lab.github.io/HR-Attrition-Analysis)**
 
 ---
 
@@ -117,7 +117,7 @@ Upload the IBM HR dataset when prompted. All dependencies are pre-installed in C
 
 ### Option 2 — Run locally
 ```bash
-git clone https://github.com/shubham-tanwar-lab/hr-attrition-analysis.git
+git clone https://github.com/shubham-tanwar-lab/HR-Attrition-Analysis.git
 cd hr-attrition-analysis
 pip install pandas numpy matplotlib seaborn scikit-learn
 jupyter notebook "HR_Attrition_Colab_Clean .ipynb"
