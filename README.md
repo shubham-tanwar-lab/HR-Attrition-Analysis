@@ -6,7 +6,6 @@
 ![Python](https://img.shields.io/badge/Python-3.10-blue?logo=python&logoColor=white)
 ![sklearn](https://img.shields.io/badge/scikit--learn-1.3-orange?logo=scikit-learn&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-3-lightgrey?logo=sqlite)
-![Power BI](https://img.shields.io/badge/Power%20BI-Dashboard-yellow?logo=powerbi)
 
 > End-to-end data science project on the **IBM HR Analytics dataset** — analysing why employees leave, identifying high-risk segments, and building ML models to predict attrition.
 
